@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+asyncpg
+python-jose[cryptography]
+bcrypt
+python-multipart
+python-dotenv
+pydantic
+cloudinary
+pytesseract
+Pillow
