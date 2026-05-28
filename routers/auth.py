@@ -14,9 +14,6 @@ SECRET_KEY = os.getenv("SECRET_KEY", "changeme-use-a-long-random-string")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
 
-
-# ── helpers ────────────────────────────────────────────────────────────────
-
 def create_token(company_id: int, company_name: str) -> str:
     expire = datetime.utcnow() + timedelta(hours=TOKEN_EXPIRE_HOURS)
     return jwt.encode(
@@ -35,15 +32,9 @@ async def get_current_company(token: str = Depends(oauth2_scheme), db=Depends(ge
         raise HTTPException(status_code=401, detail="Company not found")
     return dict(row)
 
-
-# ── schemas ────────────────────────────────────────────────────────────────
-
 class RegisterRequest(BaseModel):
     company_name: str
     password: str
-
-
-# ── routes ─────────────────────────────────────────────────────────────────
 
 @router.post("/register")
 async def register(body: RegisterRequest, db=Depends(get_db)):
@@ -52,7 +43,6 @@ async def register(body: RegisterRequest, db=Depends(get_db)):
     )
     if existing:
         raise HTTPException(status_code=400, detail="Company name already registered")
-
     hashed = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
     row = await db.fetchrow(
         "INSERT INTO companies (name, password_hash) VALUES ($1,$2) RETURNING id, name",
@@ -60,7 +50,6 @@ async def register(body: RegisterRequest, db=Depends(get_db)):
     )
     token = create_token(row["id"], row["name"])
     return {"access_token": token, "token_type": "bearer", "company_name": row["name"]}
-
 
 @router.post("/login")
 async def login(form: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
@@ -70,10 +59,8 @@ async def login(form: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db))
     )
     if not row or not bcrypt.checkpw(form.password.encode(), row["password_hash"].encode()):
         raise HTTPException(status_code=401, detail="Invalid company name or password")
-
     token = create_token(row["id"], row["name"])
     return {"access_token": token, "token_type": "bearer", "company_name": row["name"]}
-
 
 @router.get("/me")
 async def me(company=Depends(get_current_company)):

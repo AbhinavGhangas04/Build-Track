@@ -3,28 +3,22 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import date
 from database import get_db
-from api.auth import get_current_company
+from routers.auth import get_current_company
 
 router = APIRouter()
-
 
 class WorkerIn(BaseModel):
     name: str
     role: Optional[str] = None
     project_id: Optional[int] = None
 
-
 class AttendanceEntry(BaseModel):
     worker_id: int
-    status: str   # present | absent | holiday
-
+    status: str
 
 class AttendanceBulk(BaseModel):
     date: Optional[date] = None
     entries: List[AttendanceEntry]
-
-
-# ── Workers ────────────────────────────────────────────────────────────────
 
 @router.get("/workers")
 async def list_workers(company=Depends(get_current_company), db=Depends(get_db)):
@@ -37,7 +31,6 @@ async def list_workers(company=Depends(get_current_company), db=Depends(get_db))
     )
     return [dict(r) for r in rows]
 
-
 @router.post("/workers")
 async def add_worker(body: WorkerIn, company=Depends(get_current_company), db=Depends(get_db)):
     row = await db.fetchrow(
@@ -45,7 +38,6 @@ async def add_worker(body: WorkerIn, company=Depends(get_current_company), db=De
         company["id"], body.name, body.role, body.project_id
     )
     return dict(row)
-
 
 @router.put("/workers/{worker_id}")
 async def update_worker(worker_id: int, body: WorkerIn,
@@ -59,16 +51,12 @@ async def update_worker(worker_id: int, body: WorkerIn,
         raise HTTPException(404, "Worker not found")
     return dict(row)
 
-
 @router.delete("/workers/{worker_id}")
 async def delete_worker(worker_id: int, company=Depends(get_current_company), db=Depends(get_db)):
     await db.execute(
         "DELETE FROM workers WHERE id=$1 AND company_id=$2", worker_id, company["id"]
     )
     return {"ok": True}
-
-
-# ── Attendance ─────────────────────────────────────────────────────────────
 
 @router.get("/attendance")
 async def get_attendance(
@@ -104,7 +92,6 @@ async def get_attendance(
         )
     return [dict(r) for r in rows]
 
-
 @router.post("/attendance")
 async def mark_attendance(body: AttendanceBulk,
                           company=Depends(get_current_company), db=Depends(get_db)):
@@ -121,7 +108,6 @@ async def mark_attendance(body: AttendanceBulk,
         )
         results.append(dict(row))
     return results
-
 
 @router.get("/attendance/summary")
 async def attendance_summary(company=Depends(get_current_company), db=Depends(get_db)):

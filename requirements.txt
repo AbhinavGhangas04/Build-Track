@@ -1,10 +1,10 @@
 fastapi
-uvicorn
+mangum
 asyncpg
 python-jose[cryptography]
 bcrypt
 python-multipart
 python-dotenv
 pydantic
-pytesseract
 Pillow
+ 

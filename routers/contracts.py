@@ -3,10 +3,9 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import date
 from database import get_db
-from api.auth import get_current_company
+from routers.auth import get_current_company
 
 router = APIRouter()
-
 
 class ContractIn(BaseModel):
     project_id: Optional[int] = None
@@ -17,27 +16,21 @@ class ContractIn(BaseModel):
     end_date: Optional[date] = None
     status: Optional[str] = "active"
 
-
-# ── Contracts CRUD ───────────────────────────────────────────────────────────
-
 @router.get("/")
 async def list_contracts(company=Depends(get_current_company), db=Depends(get_db)):
     rows = await db.fetch(
         """SELECT c.*, p.name as project_name
            FROM contracts c
            LEFT JOIN projects p ON p.id = c.project_id
-           WHERE c.company_id=$1
-           ORDER BY c.created_at DESC""",
+           WHERE c.company_id=$1 ORDER BY c.created_at DESC""",
         company["id"]
     )
     return [dict(r) for r in rows]
 
-
 @router.get("/{contract_id}")
 async def get_contract(contract_id: int, company=Depends(get_current_company), db=Depends(get_db)):
     row = await db.fetchrow(
-        """SELECT c.*, p.name as project_name
-           FROM contracts c
+        """SELECT c.*, p.name as project_name FROM contracts c
            LEFT JOIN projects p ON p.id = c.project_id
            WHERE c.id=$1 AND c.company_id=$2""",
         contract_id, company["id"]
@@ -45,7 +38,6 @@ async def get_contract(contract_id: int, company=Depends(get_current_company), d
     if not row:
         raise HTTPException(404, "Contract not found")
     return dict(row)
-
 
 @router.post("/")
 async def create_contract(body: ContractIn, company=Depends(get_current_company), db=Depends(get_db)):
@@ -57,7 +49,6 @@ async def create_contract(body: ContractIn, company=Depends(get_current_company)
         body.start_date, body.end_date, body.status
     )
     return dict(row)
-
 
 @router.put("/{contract_id}")
 async def update_contract(contract_id: int, body: ContractIn,
@@ -73,7 +64,6 @@ async def update_contract(contract_id: int, body: ContractIn,
         raise HTTPException(404, "Contract not found")
     return dict(row)
 
-
 @router.delete("/{contract_id}")
 async def delete_contract(contract_id: int, company=Depends(get_current_company), db=Depends(get_db)):
     await db.execute(
@@ -81,13 +71,11 @@ async def delete_contract(contract_id: int, company=Depends(get_current_company)
     )
     return {"ok": True}
 
-
 @router.patch("/{contract_id}/status")
 async def update_contract_status(contract_id: int, status: str,
                                  company=Depends(get_current_company), db=Depends(get_db)):
     row = await db.fetchrow(
-        """UPDATE contracts SET status=$1
-           WHERE id=$2 AND company_id=$3 RETURNING *""",
+        "UPDATE contracts SET status=$1 WHERE id=$2 AND company_id=$3 RETURNING *",
         status, contract_id, company["id"]
     )
     if not row:

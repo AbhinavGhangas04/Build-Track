@@ -3,11 +3,11 @@ import time
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from typing import Optional
 from database import get_db
-from api.auth import get_current_company
+from routers.auth import get_current_company
 
 router = APIRouter()
 
-UPLOAD_DIR = "static/uploads"
+UPLOAD_DIR = "/tmp/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/")
@@ -20,32 +20,23 @@ async def upload_file(
     contents = await file.read()
     if len(contents) > 10 * 1024 * 1024:
         raise HTTPException(400, "File too large. Max 10MB.")
-
     timestamp = int(time.time())
     safe_filename = file.filename.replace(" ", "_")
     unique_filename = f"{company['id']}_{timestamp}_{safe_filename}"
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
-
     with open(file_path, "wb") as f:
         f.write(contents)
-    
     file_url = f"/uploads/{unique_filename}"
-
     row = await db.fetchrow(
         """INSERT INTO uploads (company_id, project_id, file_name, file_url, file_type)
            VALUES ($1,$2,$3,$4,$5) RETURNING *""",
-        company["id"], project_id, file.filename,
-        file_url, file.content_type
+        company["id"], project_id, file.filename, file_url, file.content_type
     )
     return dict(row)
 
-
 @router.get("/")
-async def list_uploads(
-    project_id: Optional[int] = None,
-    company=Depends(get_current_company),
-    db=Depends(get_db)
-):
+async def list_uploads(project_id: Optional[int] = None,
+                       company=Depends(get_current_company), db=Depends(get_db)):
     if project_id:
         rows = await db.fetch(
             "SELECT * FROM uploads WHERE company_id=$1 AND project_id=$2 ORDER BY uploaded_at DESC",
@@ -53,31 +44,16 @@ async def list_uploads(
         )
     else:
         rows = await db.fetch(
-            "SELECT * FROM uploads WHERE company_id=$1 ORDER BY uploaded_at DESC",
-            company["id"]
+            "SELECT * FROM uploads WHERE company_id=$1 ORDER BY uploaded_at DESC", company["id"]
         )
     return [dict(r) for r in rows]
-
 
 @router.delete("/{upload_id}")
 async def delete_upload(upload_id: int, company=Depends(get_current_company), db=Depends(get_db)):
     row = await db.fetchrow(
-        "SELECT file_url FROM uploads WHERE id=$1 AND company_id=$2",
-        upload_id, company["id"]
+        "SELECT file_url FROM uploads WHERE id=$1 AND company_id=$2", upload_id, company["id"]
     )
     if not row:
         raise HTTPException(404, "File not found")
-    
-    try:
-        if row["file_url"].startswith("/uploads/"):
-            file_name = row["file_url"].replace("/uploads/", "")
-            file_path = os.path.join(UPLOAD_DIR, file_name)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-    except Exception as e:
-        pass
-
-    await db.execute(
-        "DELETE FROM uploads WHERE id=$1 AND company_id=$2", upload_id, company["id"]
-    )
+    await db.execute("DELETE FROM uploads WHERE id=$1 AND company_id=$2", upload_id, company["id"])
     return {"ok": True}

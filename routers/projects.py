@@ -3,10 +3,9 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import date
 from database import get_db
-from api.auth import get_current_company
+from routers.auth import get_current_company
 
 router = APIRouter()
-
 
 class ProjectIn(BaseModel):
     name: str
@@ -17,7 +16,6 @@ class ProjectIn(BaseModel):
     progress: Optional[int] = 0
     status: Optional[str] = "active"
 
-
 @router.get("/")
 async def list_projects(company=Depends(get_current_company), db=Depends(get_db)):
     rows = await db.fetch(
@@ -25,7 +23,6 @@ async def list_projects(company=Depends(get_current_company), db=Depends(get_db)
         company["id"]
     )
     return [dict(r) for r in rows]
-
 
 @router.post("/")
 async def create_project(body: ProjectIn, company=Depends(get_current_company), db=Depends(get_db)):
@@ -37,7 +34,6 @@ async def create_project(body: ProjectIn, company=Depends(get_current_company), 
         body.end_date, body.contract_value, body.progress, body.status
     )
     return dict(row)
-
 
 @router.put("/{project_id}")
 async def update_project(project_id: int, body: ProjectIn,
@@ -53,7 +49,6 @@ async def update_project(project_id: int, body: ProjectIn,
     if not row:
         raise HTTPException(404, "Project not found")
     return dict(row)
-
 
 @router.delete("/{project_id}")
 async def delete_project(project_id: int, company=Depends(get_current_company), db=Depends(get_db)):

@@ -1,7 +1,6 @@
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from api import (
+from routers import (
     auth,
     projects,
     bills,
@@ -28,7 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include all routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(projects.router, prefix="/api/projects", tags=["Projects"])
 app.include_router(bills.router, prefix="/api/bills", tags=["Bills"])
@@ -36,19 +34,16 @@ app.include_router(labour.router, prefix="/api/labour", tags=["Labour"])
 app.include_router(materials.router, prefix="/api/materials", tags=["Materials"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(contracts.router, prefix="/api/contracts", tags=["Contracts"])
-app.include_router(
-    notifications.router, prefix="/api/notifications", tags=["Notifications"]
-)
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(ocr.router, prefix="/api/ocr", tags=["OCR"])
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 app.include_router(ai.router, prefix="/api/ai", tags=["AI Features"])
 app.include_router(daily_logs.router, prefix="/api/daily-logs", tags=["Daily Logs"])
 app.include_router(uploads.router, prefix="/api/uploads", tags=["Uploads"])
 
-# Serve frontend
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
-
 @app.on_event("startup")
 async def startup():
-    await create_tables()
+    try:
+        await create_tables()
+    except Exception as e:
+        print(f"DB init warning: {e}")
