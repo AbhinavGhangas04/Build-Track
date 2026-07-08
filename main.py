@@ -1,5 +1,8 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from routers import (
     auth,
     projects,
@@ -16,6 +19,10 @@ from routers import (
     daily_logs,
 )
 from database import create_tables
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+uploads_dir = os.path.join(BASE_DIR, "static", "uploads")
+os.makedirs(uploads_dir, exist_ok=True)
 
 app = FastAPI(title="BuildTrack Pro API")
 
@@ -40,6 +47,13 @@ app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 app.include_router(ai.router, prefix="/api/ai", tags=["AI Features"])
 app.include_router(daily_logs.router, prefix="/api/daily-logs", tags=["Daily Logs"])
 app.include_router(uploads.router, prefix="/api/uploads", tags=["Uploads"])
+
+@app.get("/")
+async def read_index():
+    return FileResponse("static/index.html")
+
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 @app.on_event("startup")
 async def startup():

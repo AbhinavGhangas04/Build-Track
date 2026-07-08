@@ -12,10 +12,13 @@ class MaterialIn(BaseModel):
     category: Optional[str] = None
     unit: Optional[str] = None
     total_quantity: Optional[float] = 0
+    used_quantity: Optional[float] = 0
     unit_price: Optional[float] = 0
     supplier_name: Optional[str] = None
     supplier_phone: Optional[str] = None
     project_id: Optional[int] = None
+    remarks: Optional[str] = None
+    arrival_date: Optional[date] = None
 
 class MaterialUsageIn(BaseModel):
     material_id: int
@@ -50,27 +53,30 @@ async def get_material(material_id: int, company=Depends(get_current_company), d
 
 @router.post("/")
 async def create_material(body: MaterialIn, company=Depends(get_current_company), db=Depends(get_db)):
+    rem_qty = (body.total_quantity or 0) - (body.used_quantity or 0)
     row = await db.fetchrow(
         """INSERT INTO materials (company_id, project_id, name, category, unit,
            total_quantity, used_quantity, remaining_quantity, unit_price,
-           supplier_name, supplier_phone)
-           VALUES ($1,$2,$3,$4,$5,$6,0,$7,$8,$9,$10) RETURNING *""",
+           supplier_name, supplier_phone, remarks, arrival_date)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *""",
         company["id"], body.project_id, body.name, body.category, body.unit,
-        body.total_quantity, body.total_quantity, body.unit_price,
-        body.supplier_name, body.supplier_phone
+        body.total_quantity, body.used_quantity or 0, rem_qty, body.unit_price,
+        body.supplier_name, body.supplier_phone, body.remarks, body.arrival_date or date.today()
     )
     return dict(row)
 
 @router.put("/{material_id}")
 async def update_material(material_id: int, body: MaterialIn,
-                         company=Depends(get_current_company), db=Depends(get_db)):
+                          company=Depends(get_current_company), db=Depends(get_db)):
+    rem_qty = (body.total_quantity or 0) - (body.used_quantity or 0)
     row = await db.fetchrow(
         """UPDATE materials SET name=$1, category=$2, unit=$3, total_quantity=$4,
-           remaining_quantity=$5, unit_price=$6, supplier_name=$7, supplier_phone=$8,
-           project_id=$9
-           WHERE id=$10 AND company_id=$11 RETURNING *""",
-        body.name, body.category, body.unit, body.total_quantity, body.total_quantity,
-        body.unit_price, body.supplier_name, body.supplier_phone, body.project_id,
+           used_quantity=$5, remaining_quantity=$6, unit_price=$7, supplier_name=$8, supplier_phone=$9,
+           project_id=$10, remarks=$11, arrival_date=$12
+           WHERE id=$13 AND company_id=$14 RETURNING *""",
+        body.name, body.category, body.unit, body.total_quantity,
+        body.used_quantity or 0, rem_qty, body.unit_price, body.supplier_name, body.supplier_phone,
+        body.project_id, body.remarks, body.arrival_date,
         material_id, company["id"]
     )
     if not row:

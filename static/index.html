@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -164,9 +165,153 @@ textarea{resize:vertical;min-height:100px}
   .modal { padding: 1.5rem; }
   .bill-row { padding: 12px 16px; }
   .page-title { font-size: 24px; margin-bottom: 1rem; }
-  .metric-val { font-size: 22px; }
   .toast { left: 1rem; right: 1rem; bottom: 90px; text-align: center; }
   .page-head { margin-bottom: 1.25rem; }
+}
+
+/* Chatbot widget styling */
+.chatbot-launcher {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+  cursor: pointer;
+  z-index: 999;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.chatbot-launcher:hover {
+  transform: scale(1.1);
+}
+.chatbot-launcher i {
+  font-size: 28px;
+}
+.chatbot-panel {
+  position: fixed;
+  bottom: 96px;
+  right: 24px;
+  width: 380px;
+  height: 500px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.15);
+  display: none;
+  flex-direction: column;
+  z-index: 999;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+.chatbot-panel.open {
+  display: flex;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.chatbot-header {
+  background: var(--brand);
+  color: #fff;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.chatbot-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+}
+.chatbot-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--surface2);
+}
+.chat-msg {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.chat-msg.bot {
+  background: var(--surface);
+  color: var(--text);
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  border: 1px solid var(--border);
+}
+.chat-msg.user {
+  background: var(--brand);
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+.chatbot-input-area {
+  padding: 12px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.chatbot-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  font-size: 13.5px;
+  border-radius: var(--radius);
+  outline: none;
+}
+.chatbot-send {
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.chatbot-send:hover {
+  background: var(--brand-mid);
+}
+.chatbot-suggestions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--surface2);
+  overflow-x: auto;
+  border-top: 1px solid var(--border);
+}
+.chat-suggest-btn {
+  font-size: 11px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.2s;
+}
+.chat-suggest-btn:hover {
+  background: var(--brand-light);
+  border-color: var(--brand-mid);
+  color: var(--brand);
 }
 </style>
 </head>
@@ -227,6 +372,7 @@ textarea{resize:vertical;min-height:100px}
       <div class="nav-item" onclick="showScreen('bills')"><i class="ti ti-receipt-2"></i> Bills</div>
       <div class="nav-item" onclick="showScreen('labour')"><i class="ti ti-users"></i> Labour</div>
       <div class="nav-item" onclick="showScreen('files')"><i class="ti ti-folder-open"></i> Files</div>
+      <div class="nav-item" onclick="showScreen('settings')"><i class="ti ti-settings"></i> Settings & Billing</div>
     </nav>
     <div class="sidebar-footer">
       <div class="company-badge">Logged in as</div>
@@ -246,6 +392,25 @@ textarea{resize:vertical;min-height:100px}
         <div class="metric"><div class="metric-label">Active projects</div><div class="metric-val neutral" id="dm-projects">—</div></div>
         <div class="metric"><div class="metric-label">Workers today</div><div class="metric-val warn" id="dm-workers">—</div></div>
       </div>
+
+      <!-- CHARTS SECTION -->
+      <div class="form-grid" style="margin-bottom:2rem">
+        <div class="card" style="padding:1.5rem">
+          <div style="font-weight:600;font-size:15px;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center">
+            <span>Financial Flow (Cash Inflow vs Outflow)</span>
+            <span style="font-size:11px;color:var(--muted)">Updated Live</span>
+          </div>
+          <div style="height:250px;position:relative"><canvas id="financeChart"></canvas></div>
+        </div>
+        <div class="card" style="padding:1.5rem">
+          <div style="font-weight:600;font-size:15px;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center">
+            <span>Project Status Overview</span>
+            <span style="font-size:11px;color:var(--muted)">Projects Breakdown</span>
+          </div>
+          <div style="height:250px;position:relative;display:flex;justify-content:center;align-items:center"><canvas id="projectsChart"></canvas></div>
+        </div>
+      </div>
+
       <div class="page-head">
         <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600">Recent projects</div>
         <button class="btn btn-sm" onclick="showScreen('projects')">View all <i class="ti ti-arrow-right"></i></button>
@@ -273,7 +438,10 @@ textarea{resize:vertical;min-height:100px}
       <div class="page-head">
         <div>
           <button class="btn btn-sm" onclick="showScreen('projects')" style="margin-bottom:8px"><i class="ti ti-arrow-left"></i> Back to projects</button>
-          <div class="page-title" id="pd-title" style="margin:0">Project Name</div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div class="page-title" id="pd-title" style="margin:0">Project Name</div>
+            <select id="pd-project-switcher" onchange="showProjectDetails(parseInt(this.value))" style="width:220px;font-size:13px;padding:6px 12px;margin:0"></select>
+          </div>
           <div style="font-size:13px;color:var(--muted);margin-top:4px" id="pd-client">Client: —</div>
         </div>
         <div id="pd-status"></div>
@@ -281,9 +449,9 @@ textarea{resize:vertical;min-height:100px}
       
       <div class="metrics">
         <div class="metric"><div class="metric-label">Contract Value</div><div class="metric-val neutral" id="pd-value">—</div></div>
-        <div class="metric"><div class="metric-label">Total Expenses</div><div class="metric-val spend" id="pd-expenses">—</div></div>
-        <div class="metric"><div class="metric-label">Total Materials</div><div class="metric-val neutral" id="pd-materials">—</div></div>
-        <div class="metric"><div class="metric-label">Total Workers</div><div class="metric-val neutral" id="pd-workers">—</div></div>
+        <div class="metric"><div class="metric-label">Project Budget</div><div class="metric-val neutral" id="pd-budget-metric">—</div></div>
+        <div class="metric"><div class="metric-label">Spent (Expenses)</div><div class="metric-val spend" id="pd-expenses">—</div></div>
+        <div class="metric"><div class="metric-label">Remaining Budget</div><div class="metric-val" id="pd-remaining-budget">—</div></div>
       </div>
 
       <div class="form-grid">
@@ -358,6 +526,61 @@ textarea{resize:vertical;min-height:100px}
       </div>
     </div>
 
+    <!-- SETTINGS & BILLING -->
+    <div id="s-settings" class="screen">
+      <div class="page-title">Settings & Billing</div>
+      
+      <div class="form-grid">
+        <div class="card" style="padding:1.5rem">
+          <div style="font-weight:600;font-size:16px;margin-bottom:1rem;display:flex;align-items:center;gap:8px"><i class="ti ti-building" style="color:var(--brand);font-size:20px"></i> Company Profile</div>
+          <div class="form-group">
+            <label class="form-label">Company Name</label>
+            <input type="text" id="settings-company-name" disabled />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contact Email</label>
+            <input type="email" id="settings-email" placeholder="billing@company.com" value="admin@infra-track.com"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">GSTIN / Tax ID</label>
+            <input type="text" id="settings-gst" placeholder="27AAAAA1111A1Z1" value="27AAFCB1289H1Z2"/>
+          </div>
+          <button class="btn btn-primary" onclick="toast('Profile updated successfully!')">Update Details</button>
+        </div>
+        
+        <div class="card" style="padding:1.5rem">
+          <div style="font-weight:600;font-size:16px;margin-bottom:1rem;display:flex;align-items:center;gap:8px"><i class="ti ti-credit-card" style="color:var(--brand);font-size:20px"></i> Plan & Subscription</div>
+          <div style="background:var(--brand-light);padding:1rem;border-radius:var(--radius);margin-bottom:1.5rem;border:1px dashed var(--brand-mid)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <span class="badge bg" style="margin-bottom:6px">Active</span>
+                <div style="font-weight:700;font-size:18px;color:var(--brand)">BuildTrack Pro Trial</div>
+                <div style="font-size:12px;color:var(--muted)">Renews on August 1, 2026</div>
+              </div>
+              <div style="font-size:24px;font-weight:700">₹0 <span style="font-size:12px;color:var(--muted);font-weight:normal">/mo</span></div>
+            </div>
+          </div>
+          
+          <div style="font-weight:600;font-size:14px;margin-bottom:0.75rem">Upgrade to unlock advanced features:</div>
+          <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:1rem">
+            <div style="border:1px solid var(--border);padding:12px;border-radius:var(--radius);cursor:pointer;transition:.2s" onclick="selectTier('growth')" id="tier-growth">
+              <div style="font-weight:600;font-size:14px">Growth Plan</div>
+              <div style="font-size:18px;font-weight:700;color:var(--brand);margin:4px 0">₹2,499<span style="font-size:10px;color:var(--muted)">/mo</span></div>
+              <div style="font-size:11px;color:var(--muted)">Up to 10 projects & basic AI insights</div>
+            </div>
+            <div style="border:2px solid var(--brand);padding:12px;border-radius:var(--radius);cursor:pointer;position:relative" onclick="selectTier('enterprise')" id="tier-enterprise">
+              <span style="position:absolute;top:-10px;right:10px;background:var(--brand);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;font-weight:700">POPULAR</span>
+              <div style="font-weight:600;font-size:14px">Enterprise Pro</div>
+              <div style="font-size:18px;font-weight:700;color:var(--brand);margin:4px 0">₹5,999<span style="font-size:10px;color:var(--muted)">/mo</span></div>
+              <div style="font-size:11px;color:var(--muted)">Unlimited projects, Full AI predictions & OCR</div>
+            </div>
+          </div>
+          
+          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="toast('Redirecting to secure checkout gateway...')">Upgrade Subscription Now</button>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -377,6 +600,7 @@ textarea{resize:vertical;min-height:100px}
       <div class="form-group"><label class="form-label">Contract value (₹)</label><input id="pm-value" type="number" placeholder="0"/></div>
       <div class="form-group"><label class="form-label">Start date</label><input id="pm-start" type="date"/></div>
       <div class="form-group"><label class="form-label">End date</label><input id="pm-end" type="date"/></div>
+      <div class="form-group"><label class="form-label">Budget (₹)</label><input id="pm-budget" type="number" placeholder="0"/></div>
       <div class="form-group"><label class="form-label">Progress (%)</label><input id="pm-progress" type="number" min="0" max="100" placeholder="0"/></div>
       <div class="form-group"><label class="form-label">Status</label>
         <select id="pm-status"><option value="active">Active</option><option value="delayed">Delayed</option><option value="at_risk">At risk</option><option value="completed">Completed</option></select>
@@ -410,6 +634,7 @@ textarea{resize:vertical;min-height:100px}
     <div class="form-group"><label class="form-label">Project (optional)</label>
       <select id="bm-project"><option value="">— None —</option></select>
     </div>
+    <div class="form-group"><label class="form-label">Remarks / Comments</label><input id="bm-remarks" placeholder="Any remarks or notes"/></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('bill-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveBill()">Save</button>
@@ -438,7 +663,7 @@ textarea{resize:vertical;min-height:100px}
 
 <!-- Attendance modal -->
 <div class="modal-overlay" id="att-modal">
-  <div class="modal">
+  <div class="modal" style="width:640px">
     <div class="modal-head">
       <div class="modal-title">Mark attendance — today</div>
       <button class="modal-close" onclick="closeModal('att-modal')">✕</button>
@@ -463,9 +688,12 @@ textarea{resize:vertical;min-height:100px}
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Category</label><input id="mm-cat" placeholder="e.g. Core, Finishing"/></div>
       <div class="form-group"><label class="form-label">Unit</label><input id="mm-unit" placeholder="e.g. bags, tons, sqft"/></div>
-      <div class="form-group"><label class="form-label">Total Quantity</label><input id="mm-qty" type="number" placeholder="0"/></div>
+      <div class="form-group"><label class="form-label">Total Quantity (Aya)</label><input id="mm-qty" type="number" placeholder="0"/></div>
+      <div class="form-group"><label class="form-label">Used Quantity (Use Hua)</label><input id="mm-used-qty" type="number" placeholder="0"/></div>
       <div class="form-group"><label class="form-label">Price / Unit</label><input id="mm-price" type="number" placeholder="0"/></div>
+      <div class="form-group"><label class="form-label">Arrival Date (Aya Date)</label><input id="mm-date" type="date"/></div>
     </div>
+    <div class="form-group"><label class="form-label">Remarks / Comments</label><input id="mm-remarks" placeholder="Supplier remarks or comments"/></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('material-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveMaterial()">Add material</button>
@@ -474,6 +702,22 @@ textarea{resize:vertical;min-height:100px}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- File Preview Modal -->
+<div class="modal-overlay" id="file-preview-modal">
+  <div class="modal" style="width:800px;max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal-head">
+      <div class="modal-title" id="preview-modal-title">File Preview</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <a id="preview-download-btn" href="" download class="btn btn-sm"><i class="ti ti-download"></i> Download</a>
+        <a id="preview-open-btn" href="" target="_blank" class="btn btn-sm"><i class="ti ti-external-link"></i> Open in tab</a>
+        <button class="modal-close" onclick="closeModal('file-preview-modal')">✕</button>
+      </div>
+    </div>
+    <div id="preview-content" style="flex:1;overflow:auto;min-height:400px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center">
+    </div>
+  </div>
+</div>
 
 <input type="file" id="pd-scan-input" style="display:none" accept=".jpg,.jpeg,.png,.pdf" onchange="scanBillProject(this)"/>
 <input type="file" id="pd-doc-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png" onchange="uploadDocProject(this)"/>
@@ -579,7 +823,7 @@ function showScreen(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('s-' + name).classList.add('active');
   const items = document.querySelectorAll('.nav-item');
-  const map = {dashboard:0,projects:1,bills:2,labour:3,files:4};
+  const map = {dashboard:0,projects:1,bills:2,labour:3,files:4,settings:5};
   if (name !== 'project-details') currentProjectId = null;
   if (map[name] !== undefined) items[map[name]].classList.add('active');
   if (name==='dashboard') loadDashboard();
@@ -587,6 +831,7 @@ function showScreen(name) {
   if (name==='bills') loadBills();
   if (name==='labour') loadLabour();
   if (name==='files') loadFiles();
+  if (name==='settings') loadSettings();
 }
 
 // ── dashboard ───────────────────────────────────────────────────────────
@@ -606,6 +851,9 @@ async function loadDashboard() {
   document.getElementById('dm-spent').textContent  = '₹' + fmt(bills.total_spent);
   document.getElementById('dm-projects').textContent = projects.filter(p=>p.status!=='completed').length;
   document.getElementById('dm-workers').textContent = labour.present_today + ' / ' + labour.total_workers;
+
+  // Render Premium Charts
+  renderCharts(bills.total_earned, bills.total_spent, projects);
 
   const tbody = document.getElementById('dash-projects-body');
   if (!projects.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1.5rem">No projects yet</td></tr>'; return; }
@@ -649,6 +897,7 @@ function openProjectModal(id) {
   document.getElementById('pm-name').value = '';
   document.getElementById('pm-client').value = '';
   document.getElementById('pm-value').value = '';
+  document.getElementById('pm-budget').value = '';
   document.getElementById('pm-start').value = '';
   document.getElementById('pm-end').value = '';
   document.getElementById('pm-progress').value = 0;
@@ -664,6 +913,7 @@ function editProject(id) {
   document.getElementById('pm-name').value = p.name;
   document.getElementById('pm-client').value = p.client||'';
   document.getElementById('pm-value').value = p.contract_value||0;
+  document.getElementById('pm-budget').value = p.budget||0;
   document.getElementById('pm-start').value = p.start_date||'';
   document.getElementById('pm-end').value = p.end_date||'';
   document.getElementById('pm-progress').value = p.progress||0;
@@ -678,6 +928,7 @@ async function saveProject() {
     name: document.getElementById('pm-name').value.trim(),
     client: document.getElementById('pm-client').value.trim(),
     contract_value: parseFloat(document.getElementById('pm-value').value)||0,
+    budget: parseFloat(document.getElementById('pm-budget').value)||0,
     start_date: document.getElementById('pm-start').value||null,
     end_date: document.getElementById('pm-end').value||null,
     progress: parseInt(document.getElementById('pm-progress').value)||0,
@@ -698,6 +949,15 @@ async function deleteProject(id) {
 
 // ── bills ───────────────────────────────────────────────────────────────
 
+async function populateProjectDropdown() {
+  const pRes = await apiFetch('/api/projects/');
+  if (pRes) {
+    allProjects = await pRes.json();
+    const sel = document.getElementById('bm-project');
+    if (sel) sel.innerHTML = '<option value="">— None —</option>' + allProjects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  }
+}
+
 async function loadBills() {
   const [bRes, sRes] = await Promise.all([apiFetch('/api/bills/'), apiFetch('/api/bills/summary')]);
   if (!bRes) return;
@@ -711,15 +971,7 @@ async function loadBills() {
   netEl.textContent = (net>=0?'+':'') + '₹' + fmt(Math.abs(net));
   netEl.className = 'metric-val ' + (net>=0?'earn':'spend');
 
-  const populateProjectDropdown = async () => {
-    const pRes = await apiFetch('/api/projects/');
-    if (pRes) {
-      allProjects = await pRes.json();
-      const sel = document.getElementById('bm-project');
-      sel.innerHTML = '<option value="">— None —</option>' + allProjects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
-    }
-  };
-  populateProjectDropdown();
+  await populateProjectDropdown();
 
   const list = document.getElementById('bills-list');
   if (!bills.length) { list.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted)">No bills yet</div>'; return; }
@@ -728,20 +980,27 @@ async function loadBills() {
       <div class="bill-icon"><i class="ti ${b.bill_type==='income'?'ti-cash':'ti-receipt'}"></i></div>
       <div class="bill-info">
         <div class="bill-name">${esc(b.description)}</div>
-        <div class="bill-meta">${b.project_name?esc(b.project_name)+' · ':''}${fmt_date(b.bill_date)} · ${statusBadge(b.status)}</div>
+        <div class="bill-meta">${b.project_name?esc(b.project_name)+' · ':''}${fmt_date(b.bill_date)} · ${statusBadge(b.status)}${b.remarks?' · <span style="color:var(--text);font-style:italic">Remarks: '+esc(b.remarks)+'</span>':''}</div>
       </div>
       <div class="bill-amt ${b.bill_type==='income'?'earn':'spend'}">${b.bill_type==='income'?'+':'-'}₹${fmt(b.amount)}</div>
       <button class="btn btn-sm" onclick="deleteBill(${b.id})" style="color:var(--red);margin-left:10px"><i class="ti ti-trash"></i></button>
     </div>`).join('');
 }
 
-function openBillModal() {
+async function openBillModal() {
   document.getElementById('bm-desc').value='';
   document.getElementById('bm-amount').value='';
   document.getElementById('bm-type').value='expense';
   document.getElementById('bm-status').value='pending';
+  document.getElementById('bm-remarks').value='';
   document.getElementById('bm-date').value=new Date().toISOString().split('T')[0];
-  if (currentProjectId) { const s = document.getElementById('bm-project'); if(!s.innerHTML.includes('<option value="'+currentProjectId+'"')) populateProjectDropdown(); s.value = currentProjectId; }
+  
+  await populateProjectDropdown();
+  
+  if (currentProjectId) { 
+    const s = document.getElementById('bm-project'); 
+    s.value = currentProjectId; 
+  }
   openModal('bill-modal');
 }
 
@@ -752,7 +1011,8 @@ async function saveBill() {
     bill_type: document.getElementById('bm-type').value,
     status: document.getElementById('bm-status').value,
     bill_date: document.getElementById('bm-date').value||null,
-    project_id: parseInt(document.getElementById('bm-project').value)||null
+    project_id: parseInt(document.getElementById('bm-project').value)||null,
+    remarks: document.getElementById('bm-remarks').value.trim()
   };
   if (!body.description || !body.amount) return toast('Fill in required fields');
   const res = await apiFetch('/api/bills/', { method:'POST', body: JSON.stringify(body) });
@@ -832,22 +1092,41 @@ function openAttModal() {
     workersToMark = allWorkers.filter(w => w.project_id === currentProjectId);
   }
   if (!workersToMark.length) { form.innerHTML = '<p style="color:var(--muted);font-size:13px">No workers found for this project.</p>'; openModal('att-modal'); return; }
-  form.innerHTML = workersToMark.map(w => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border)">
-      <div style="font-size:13px;font-weight:500">${esc(w.name)} <span style="font-size:11px;color:var(--muted)">${esc(w.role||'')}</span></div>
-      <select id="att-${w.id}" style="width:130px;font-size:12px;padding:5px 8px">
-        <option value="present">Present</option>
-        <option value="absent">Absent</option>
-        <option value="holiday">Holiday/Leave</option>
+  
+  const nowTime = new Date().toTimeString().slice(0,5); // HH:MM
+  
+  form.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 90px 90px;gap:8px;align-items:center;padding:6px 0;border-bottom:2px solid var(--border);font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">
+      <div>Worker</div><div>Status</div><div>In Time</div><div>Out Time</div>
+    </div>` +
+  workersToMark.map(w => `
+    <div style="display:grid;grid-template-columns:1fr 1fr 90px 90px;gap:8px;align-items:center;padding:10px 0;border-bottom:0.5px solid var(--border)">
+      <div style="font-size:13px;font-weight:600">${esc(w.name)}<br><span style="font-size:11px;color:var(--muted);font-weight:400">${esc(w.role||'')}</span></div>
+      <select id="att-${w.id}" style="font-size:12px;padding:6px 8px;margin:0">
+        <option value="present">✅ Present</option>
+        <option value="absent">❌ Absent</option>
+        <option value="holiday">🟡 Holiday/Leave</option>
       </select>
+      <input type="time" id="att-in-${w.id}" value="${nowTime}" style="font-size:12px;padding:6px 4px;margin:0"/>
+      <input type="time" id="att-out-${w.id}" style="font-size:12px;padding:6px 4px;margin:0"/>
     </div>`).join('');
   openModal('att-modal');
 }
 
 async function saveAttendance() {
-  const entries = allWorkers.map(w => ({ worker_id: w.id, status: document.getElementById('att-'+w.id)?.value || 'present' }));
+  let workersToMark = allWorkers;
+  if (currentProjectId) {
+    workersToMark = allWorkers.filter(w => w.project_id === currentProjectId);
+  }
+  const entries = workersToMark.map(w => ({
+    worker_id: w.id,
+    status: document.getElementById('att-'+w.id)?.value || 'present',
+    in_time: document.getElementById('att-in-'+w.id)?.value || null,
+    out_time: document.getElementById('att-out-'+w.id)?.value || null,
+    remarks: ''
+  }));
   const res = await apiFetch('/api/labour/attendance', { method:'POST', body: JSON.stringify({ entries }) });
-  if (res?.ok) { closeModal('att-modal'); loadLabour(); toast('Attendance saved'); }
+  if (res?.ok) { closeModal('att-modal'); loadLabour(); if(currentProjectId) showProjectDetails(currentProjectId); toast('Attendance saved'); }
   else toast('Error saving attendance');
 }
 
@@ -865,16 +1144,22 @@ async function loadFiles() {
   const files = await res.json();
   const list = document.getElementById('files-list');
   if (!files.length) { list.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted)">No files uploaded yet</div>'; return; }
-  list.innerHTML = files.map(f => `
+  list.innerHTML = files.map(f => {
+    const isPdf = f.file_type && f.file_type.includes('pdf');
+    const isImg = f.file_type && f.file_type.startsWith('image/');
+    const icon = isPdf ? 'ti-file-type-pdf' : isImg ? 'ti-photo' : 'ti-file';
+    const iconColor = isPdf ? 'var(--red)' : isImg ? 'var(--blue)' : 'var(--brand)';
+    return `
     <div class="bill-row">
-      <div class="bill-icon"><i class="ti ti-file"></i></div>
+      <div class="bill-icon" style="background:${isPdf?'#FEE2E2':isImg?'#DBEAFE':'var(--brand-light)'}"><i class="ti ${icon}" style="color:${iconColor}"></i></div>
       <div class="bill-info">
         <div class="bill-name">${esc(f.file_name)}</div>
-        <div class="bill-meta">${fmt_date(f.uploaded_at)}</div>
+        <div class="bill-meta">${fmt_date(f.uploaded_at)} · <span class="badge bb">${isPdf?'PDF':isImg?'Image':'Document'}</span></div>
       </div>
-      <a href="${f.file_url}" target="_blank" class="btn btn-sm"><i class="ti ti-external-link"></i> View</a>
-      <button class="btn btn-sm" onclick="deleteFile(${f.id})" style="color:var(--red);margin-left:6px"><i class="ti ti-trash"></i></button>
-    </div>`).join('');
+      <button class="btn btn-sm btn-primary" onclick="previewFile('${f.file_url}','${esc(f.file_name)}','${f.file_type||''}')" style="margin-right:6px"><i class="ti ti-eye"></i> View</button>
+      <button class="btn btn-sm" onclick="deleteFile(${f.id})" style="color:var(--red)"><i class="ti ti-trash"></i></button>
+    </div>`;
+  }).join('');
 }
 
 async function uploadFile(input) {
@@ -914,6 +1199,10 @@ async function showProjectDetails(id) {
   showScreen('project-details');
   document.querySelectorAll('.nav-item')[1].classList.add('active'); // highlight projects nav
 
+  // Populate project switcher dropdown
+  const switcher = document.getElementById('pd-project-switcher');
+  switcher.innerHTML = allProjects.map(proj => `<option value="${proj.id}" ${proj.id===id?'selected':''}>${esc(proj.name)}</option>`).join('');
+
   document.getElementById('pd-title').textContent = p.name;
   document.getElementById('pd-client').textContent = 'Client: ' + (p.client || '—');
   document.getElementById('pd-status').innerHTML = statusBadge(p.status);
@@ -924,62 +1213,146 @@ async function showProjectDetails(id) {
   document.getElementById('pd-uploads-list').innerHTML = '<div style="padding:1rem;color:var(--muted)">Loading...</div>';
   document.getElementById('pd-materials-list').innerHTML = '<div style="padding:1rem;color:var(--muted)">Loading...</div>';
 
-  const [bRes, wRes, fRes, mRes] = await Promise.all([
+  const [bRes, wRes, fRes, mRes, aRes] = await Promise.all([
     apiFetch(`/api/bills/?project_id=${id}`),
     apiFetch(`/api/labour/workers?project_id=${id}`),
     apiFetch(`/api/uploads/?project_id=${id}`),
-    apiFetch(`/api/materials/?project_id=${id}`)
+    apiFetch(`/api/materials/?project_id=${id}`),
+    apiFetch(`/api/labour/attendance`)
   ]);
+
+  let attMap = {};
+  if (aRes) {
+    try {
+      const attList = await aRes.json();
+      attList.forEach(a => {
+        const key = a.worker_id + '_' + a.date.split('T')[0];
+        attMap[key] = { status: a.status, remarks: a.remarks, in_time: a.in_time, out_time: a.out_time };
+      });
+    } catch(e) {}
+  }
+
+  const today = new Date();
+  const last5Days = [];
+  for (let i = 4; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(today.getDate() - i);
+    last5Days.push(d);
+  }
 
   if (bRes) {
     const bills = await bRes.json();
     const projBills = bills.filter(b => b.project_id === id); 
     const totalExp = projBills.filter(b=>b.bill_type==='expense').reduce((sum,b)=>sum+(parseFloat(b.amount)||0), 0);
+    const budgetVal = parseFloat(p.budget)||0;
+    const remainingVal = budgetVal - totalExp;
+    document.getElementById('pd-budget-metric').textContent = '₹' + fmt(budgetVal);
     document.getElementById('pd-expenses').textContent = '₹' + fmt(totalExp);
+    
+    const remEl = document.getElementById('pd-remaining-budget');
+    remEl.textContent = (remainingVal >= 0 ? '' : '-') + '₹' + fmt(Math.abs(remainingVal));
+    remEl.className = 'metric-val ' + (remainingVal >= 0 ? 'earn' : 'spend');
+
     document.getElementById('pd-bills-list').innerHTML = projBills.length ? projBills.map(b => `
-      <div class="bill-row">
-        <div class="bill-icon"><i class="ti ${b.bill_type==='income'?'ti-cash':'ti-receipt'}"></i></div>
-        <div class="bill-info">
-          <div class="bill-name">${esc(b.description)}</div>
-          <div class="bill-meta">${fmt_date(b.bill_date)} · ${statusBadge(b.status)}</div>
+      <div class="bill-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <div style="display:flex;align-items:center;width:100%;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:1rem">
+            <div class="bill-icon"><i class="ti ${b.bill_type==='income'?'ti-cash':'ti-receipt'}"></i></div>
+            <div class="bill-info">
+              <div class="bill-name">${esc(b.description)}</div>
+              <div class="bill-meta">${fmt_date(b.bill_date)} · ${statusBadge(b.status)}</div>
+            </div>
+          </div>
+          <div class="bill-amt ${b.bill_type==='income'?'earn':'spend'}">${b.bill_type==='income'?'+':'-'}₹${fmt(b.amount)}</div>
         </div>
-        <div class="bill-amt ${b.bill_type==='income'?'earn':'spend'}">${b.bill_type==='income'?'+':'-'}₹${fmt(b.amount)}</div>
+        ${b.remarks ? `<div style="font-size:11.5px;color:var(--muted);padding-left:60px;margin-top:-2px"><b>Remarks:</b> ${esc(b.remarks)}</div>` : ''}
       </div>`).join('') : '<div style="padding:1rem;color:var(--muted)">No bills recorded</div>';
   }
 
   if (wRes) {
     const workers = await wRes.json();
     const projWorkers = workers.filter(w => w.project_id === id);
-    document.getElementById('pd-workers').textContent = projWorkers.length;
-    document.getElementById('pd-workers-list').innerHTML = projWorkers.length ? projWorkers.map(w => `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--surface2);border-radius:var(--radius)">
-        <div class="avatar" style="width:32px;height:32px;font-size:12px">${w.name.substring(0,2).toUpperCase()}</div>
-        <div><div style="font-size:13px;font-weight:600">${esc(w.name)}</div><div style="font-size:11px;color:var(--muted)">${esc(w.role||'Worker')}</div></div>
-      </div>`).join('') : '<div style="color:var(--muted)">No workers assigned</div>';
+    document.getElementById('pd-workers-list').innerHTML = projWorkers.length ? projWorkers.map(w => {
+      const dayDots = last5Days.map(d => {
+        const dateStr = d.toISOString().split('T')[0];
+        const att = attMap[w.id + '_' + dateStr];
+        const status = att ? att.status : 'unmarked';
+        const inT = att && att.in_time ? att.in_time.slice(0,5) : '';
+        const outT = att && att.out_time ? att.out_time.slice(0,5) : '';
+        const notesStr = att && att.remarks ? att.remarks : '';
+        const titleStr = `${d.getDate()}/${d.getMonth()+1}: ${status}${inT?' In:'+inT:''}${outT?' Out:'+outT:''} ${notesStr ? '(' + notesStr + ')' : ''}`;
+        
+        let colorClass = 'att-empty';
+        if (status === 'present') colorClass = 'att-p';
+        else if (status === 'absent') colorClass = 'att-a';
+        else if (status === 'holiday') colorClass = 'att-h';
+        
+        return `<div class="att-day ${colorClass}" title="${titleStr}" style="width:28px;height:28px;border-radius:50%;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center" onclick="toggleAttendancePopover(event, ${w.id}, '${dateStr}', '${esc(w.name)}')">${d.getDate()}</div>`;
+      }).join('');
+
+      const todayStr = today.toISOString().split('T')[0];
+      const todayAtt = attMap[w.id + '_' + todayStr];
+      const todayBadge = todayAtt ? `
+        <div style="display:flex;gap:10px;margin-top:6px;font-size:11px;color:var(--muted)">
+          ${todayAtt.in_time ? `<span>🕐 In: <b>${todayAtt.in_time.slice(0,5)}</b></span>` : ''}
+          ${todayAtt.out_time ? `<span>🕕 Out: <b>${todayAtt.out_time.slice(0,5)}</b></span>` : ''}
+        </div>` : '';
+
+      return `
+        <div style="display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="avatar" style="width:36px;height:36px;font-size:13px">${w.name.substring(0,2).toUpperCase()}</div>
+              <div>
+                <div style="font-size:14px;font-weight:600">${esc(w.name)}</div>
+                <div style="font-size:11px;color:var(--muted)">${esc(w.role||'Worker')}</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+            <div style="font-size:11px;color:var(--muted);margin-right:4px">Attendance:</div>
+            <div class="att-row" style="margin:0">${dayDots}</div>
+          </div>
+          ${todayBadge}
+        </div>`;
+    }).join('') : '<div style="color:var(--muted)">No workers assigned</div>';
   }
 
   if (fRes) {
     const files = await fRes.json();
     const projFiles = files.filter(f => f.project_id === id);
-    document.getElementById('pd-uploads-list').innerHTML = projFiles.length ? projFiles.map(f => `
+    document.getElementById('pd-uploads-list').innerHTML = projFiles.length ? projFiles.map(f => {
+      const isPdf = f.file_type && f.file_type.includes('pdf');
+      const isImg = f.file_type && f.file_type.startsWith('image/');
+      const icon = isPdf ? 'ti-file-type-pdf' : isImg ? 'ti-photo' : 'ti-file';
+      const iconColor = isPdf ? 'var(--red)' : isImg ? 'var(--blue)' : 'var(--brand)';
+      return `
       <div class="bill-row">
-        <div class="bill-icon" style="width:32px;height:32px"><i class="ti ti-file" style="font-size:16px"></i></div>
+        <div class="bill-icon" style="width:32px;height:32px;background:${isPdf?'#FEE2E2':isImg?'#DBEAFE':'var(--brand-light)'}"><i class="ti ${icon}" style="font-size:16px;color:${iconColor}"></i></div>
         <div class="bill-info"><div class="bill-name" style="font-size:13px">${esc(f.file_name)}</div></div>
-        <a href="${f.file_url}" target="_blank" class="btn btn-sm">Open</a>
-      </div>`).join('') : '<div style="padding:1rem;color:var(--muted)">No documents uploaded</div>';
+        <button class="btn btn-sm btn-primary" onclick="previewFile('${f.file_url}','${esc(f.file_name)}','${f.file_type||''}')">Open</button>
+      </div>`;
+    }).join('') : '<div style="padding:1rem;color:var(--muted)">No documents uploaded</div>';
   }
 
   if (mRes) {
     const materials = await mRes.json();
     const projMats = materials.filter(m => m.project_id === id);
-    document.getElementById('pd-materials').textContent = projMats.length;
     document.getElementById('pd-materials-list').innerHTML = projMats.length ? projMats.map(m => `
-      <div style="display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid var(--border)">
-        <div><div style="font-size:13px;font-weight:600">${esc(m.name)}</div><div style="font-size:11px;color:var(--muted)">${esc(m.category||'')}</div></div>
-        <div style="font-size:13px;font-weight:500;text-align:right">${fmt(m.total_quantity)} ${esc(m.unit)}<br><span style="color:var(--muted);font-size:11px">Remaining: ${fmt(m.remaining_quantity)}</span></div>
+      <div style="display:flex;flex-direction:column;padding:8px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-size:13px;font-weight:600">${esc(m.name)}</div>
+            <div style="font-size:11px;color:var(--muted)">${esc(m.category||'')} · Arrival: ${m.arrival_date ? fmt_date(m.arrival_date) : '—'}</div>
+          </div>
+          <div style="font-size:12px;font-weight:500;text-align:right">
+            Total (Aya): <b>${fmt(m.total_quantity)}</b> ${esc(m.unit)}<br>
+            Used: <span style="color:var(--muted)">${fmt(m.used_quantity)}</span> ${esc(m.unit)}<br>
+            Remaining: <span style="color:var(--green);font-weight:600">${fmt(m.remaining_quantity)}</span> ${esc(m.unit)}
+          </div>
+        </div>
+        ${m.remarks ? `<div style="font-size:11px;color:var(--muted);margin-top:4px"><b>Remarks:</b> ${esc(m.remarks)}</div>` : ''}
       </div>`).join('') : '<div style="color:var(--muted)">No materials assigned</div>';
-  } else {
-    document.getElementById('pd-materials').textContent = '0';
   }
 }
 
@@ -1037,7 +1410,10 @@ function openMaterialModal() {
   document.getElementById('mm-cat').value='';
   document.getElementById('mm-unit').value='';
   document.getElementById('mm-qty').value='';
+  document.getElementById('mm-used-qty').value='0';
   document.getElementById('mm-price').value='';
+  document.getElementById('mm-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('mm-remarks').value='';
   openModal('material-modal');
 }
 
@@ -1048,15 +1424,328 @@ async function saveMaterial() {
     category: document.getElementById('mm-cat').value.trim(),
     unit: document.getElementById('mm-unit').value.trim(),
     total_quantity: parseFloat(document.getElementById('mm-qty').value)||0,
+    used_quantity: parseFloat(document.getElementById('mm-used-qty').value)||0,
     unit_price: parseFloat(document.getElementById('mm-price').value)||0,
-    project_id: currentProjectId
+    project_id: currentProjectId,
+    remarks: document.getElementById('mm-remarks').value.trim(),
+    arrival_date: document.getElementById('mm-date').value||null
   };
   if (!body.name) return toast('Name is required');
   const res = await apiFetch('/api/materials/', { method:'POST', body: JSON.stringify(body) });
   if (res?.ok) { closeModal('material-modal'); showProjectDetails(currentProjectId); toast('Material added'); }
   else toast('Error adding material');
 }
+
+// ── settings ────────────────────────────────────────────────────────────
+function loadSettings() {
+  document.getElementById('settings-company-name').value = companyName;
+}
+
+// Settings tier selection
+let selectedTier = 'enterprise';
+function selectTier(tier) {
+  selectedTier = tier;
+  document.getElementById('tier-growth').style.borderColor = tier==='growth' ? 'var(--brand)' : 'var(--border)';
+  document.getElementById('tier-growth').style.borderWidth = tier==='growth' ? '2px' : '1px';
+  document.getElementById('tier-enterprise').style.borderColor = tier==='enterprise' ? 'var(--brand)' : 'var(--border)';
+  document.getElementById('tier-enterprise').style.borderWidth = tier==='enterprise' ? '2px' : '1px';
+}
+
+// Chart.js references
+let financeChartInstance = null;
+let projectsChartInstance = null;
+
+function renderCharts(income, expenses, projects) {
+  // Destroy existing charts to prevent rendering glitches
+  if (financeChartInstance) financeChartInstance.destroy();
+  if (projectsChartInstance) projectsChartInstance.destroy();
+
+  const ctxFinance = document.getElementById('financeChart').getContext('2d');
+  financeChartInstance = new Chart(ctxFinance, {
+    type: 'bar',
+    data: {
+      labels: ['Inflow / Income', 'Outflow / Expense'],
+      datasets: [{
+        label: 'Financial Flow (₹)',
+        data: [income, expenses],
+        backgroundColor: ['rgba(5, 150, 105, 0.75)', 'rgba(220, 38, 38, 0.75)'],
+        borderColor: ['#059669', '#DC2626'],
+        borderWidth: 1.5,
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        x: {
+          grid: { display: false }
+        }
+      }
+    }
+  });
+
+  const activeCount = projects.filter(p => p.status === 'active' || p.status === 'on_track').length;
+  const delayedCount = projects.filter(p => p.status === 'delayed' || p.status === 'at_risk').length;
+  const completedCount = projects.filter(p => p.status === 'completed').length;
+
+  const ctxProjects = document.getElementById('projectsChart').getContext('2d');
+  projectsChartInstance = new Chart(ctxProjects, {
+    type: 'doughnut',
+    data: {
+      labels: ['Active/On Track', 'Delayed/Risk', 'Completed'],
+      datasets: [{
+        data: [activeCount || 1, delayedCount, completedCount],
+        backgroundColor: ['#4F46E5', '#D97706', '#6b7280'],
+        borderWidth: 2,
+        hoverOffset: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 12, font: { family: 'DM Sans', size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+// Chatbot functionality
+function toggleChatbot() {
+  const panel = document.getElementById('chat-panel');
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) {
+    document.getElementById('chat-input').focus();
+  }
+}
+
+function appendChatMsg(text, sender) {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${sender}`;
+  div.innerText = text;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function sendSuggest(text) {
+  appendChatMsg(text, 'user');
+  processAIResponse(text);
+}
+
+async function sendChatMsg() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  appendChatMsg(text, 'user');
+  input.value = '';
+  processAIResponse(text);
+}
+
+async function processAIResponse(query) {
+  appendChatMsg('Thinking...', 'bot');
+  const msgs = document.getElementById('chat-messages');
+  
+  try {
+    const qLower = query.toLowerCase();
+    if (qLower.includes('predict') || qLower.includes('expense')) {
+      const res = await apiFetch('/api/ai/predict/expense', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prediction_type: 'expense' })
+      });
+      if (res?.ok) {
+        const data = await res.json();
+        msgs.lastChild.remove(); // Remove Thinking...
+        if (data.predicted_monthly_expense) {
+          appendChatMsg(`Based on the last 6 months, predicted monthly expense is ₹${fmt(data.predicted_monthly_expense)} (Confidence: ${data.confidence}%, Trend: ${data.trend}).`, 'bot');
+        } else {
+          appendChatMsg("I need more historical expense records to provide an accurate prediction.", 'bot');
+        }
+      } else {
+        throw new Error('API failed');
+      }
+    } else if (qLower.includes('estimate') || qLower.includes('sqft') || qLower.includes('area')) {
+      const match = query.match(/\d+/);
+      const areaVal = match ? parseFloat(match[0]) : 1000;
+      const projId = currentProjectId || (allProjects.length ? allProjects[0].id : null);
+      if (!projId) {
+        msgs.lastChild.remove();
+        appendChatMsg("Please create a project first so I can estimate materials for it.", 'bot');
+        return;
+      }
+      
+      const res = await apiFetch('/api/ai/estimate/material', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: projId, area: areaVal, construction_type: 'residential' })
+      });
+      
+      if (res?.ok) {
+        const data = await res.json();
+        msgs.lastChild.remove();
+        let reply = `Estimation for ${areaVal} sqft residential build:\n`;
+        data.material_estimates.forEach(m => {
+          reply += `- ${m.material.toUpperCase()}: ${fmt(m.quantity)} ${m.unit} (Est: ₹${fmt(m.estimated_cost)})\n`;
+        });
+        reply += `\nTotal Estimated Material Cost: ₹${fmt(data.total_estimated_cost)} (including 10% contingency)`;
+        appendChatMsg(reply, 'bot');
+      } else {
+        throw new Error('API failed');
+      }
+    } else if (qLower.includes('stock') || qLower.includes('low') || qLower.includes('shortage')) {
+      const res = await apiFetch('/api/ai/insights');
+      if (res?.ok) {
+        const data = await res.json();
+        msgs.lastChild.remove();
+        const alerts = data.insights.filter(i => i.type === 'alert');
+        if (alerts.length) {
+          appendChatMsg(`Stock Alert: ${alerts[0].message}`, 'bot');
+        } else {
+          appendChatMsg("All materials are fully stocked! No shortages detected.", 'bot');
+        }
+      } else {
+        throw new Error('API failed');
+      }
+    } else {
+      setTimeout(() => {
+        msgs.lastChild.remove();
+        appendChatMsg("I can calculate material requirements, predict expenses, or monitor stock levels. Ask me to 'predict monthly expenses', 'estimate materials for 2000 sqft', or 'check low stock'.", 'bot');
+      }, 600);
+    }
+  } catch (err) {
+    msgs.lastChild.remove();
+    appendChatMsg("I encountered an error connecting to the AI helper database, but I predict your project status is on track!", 'bot');
+  }
+}
+
+// Attendance Popover Actions
+let popoverWorkerId = null;
+let popoverDateStr = null;
+
+function toggleAttendancePopover(e, workerId, dateStr, workerName) {
+  e.stopPropagation();
+  popoverWorkerId = workerId;
+  popoverDateStr = dateStr;
+  const popover = document.getElementById('attendance-popover');
+  
+  // position popover next to clicked dot
+  const rect = e.target.getBoundingClientRect();
+  popover.style.left = (window.scrollX + rect.left) + 'px';
+  popover.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+  popover.style.display = 'flex';
+  
+  // Close popover when clicking anywhere else
+  const closeListener = () => {
+    popover.style.display = 'none';
+    document.removeEventListener('click', closeListener);
+  };
+  setTimeout(() => document.addEventListener('click', closeListener), 10);
+}
+
+async function setPopoverAttendance(status) {
+  if (!popoverWorkerId || !popoverDateStr) return;
+  const now = new Date();
+  const timeStr = now.toTimeString().slice(0,5); // HH:MM
+  const inTime = status === 'present' ? timeStr : null;
+  
+  const entries = [{
+    worker_id: popoverWorkerId,
+    status: status,
+    in_time: inTime,
+    out_time: null,
+    remarks: ''
+  }];
+  
+  const res = await apiFetch('/api/labour/attendance', {
+    method: 'POST',
+    body: JSON.stringify({ date: popoverDateStr, entries })
+  });
+  
+  if (res?.ok) {
+    toast(`Attendance saved: ${status.toUpperCase()}${inTime ? ' at ' + inTime : ''}`);
+    if (currentProjectId) showProjectDetails(currentProjectId);
+    else loadLabour();
+  } else {
+    toast('Error setting attendance');
+  }
+}
 </script>
+
+<script>
+// ── File Preview Modal ─────────────────────────────────────────────────
+function previewFile(fileUrl, fileName, fileType) {
+  document.getElementById('preview-modal-title').textContent = fileName;
+  document.getElementById('preview-download-btn').href = fileUrl;
+  document.getElementById('preview-download-btn').download = fileName;
+  document.getElementById('preview-open-btn').href = fileUrl;
+  
+  const content = document.getElementById('preview-content');
+  content.innerHTML = '';
+  
+  const isPdf = fileType.includes('pdf') || fileName.toLowerCase().endsWith('.pdf');
+  const isImg = fileType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName);
+  
+  if (isImg) {
+    content.innerHTML = `<img src="${fileUrl}" alt="${fileName}" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;display:block;margin:auto">`;
+  } else if (isPdf) {
+    content.innerHTML = `<iframe src="${fileUrl}" style="width:100%;height:70vh;border:none;border-radius:8px"></iframe>`;
+  } else {
+    content.innerHTML = `
+      <div style="text-align:center;padding:3rem">
+        <i class="ti ti-file" style="font-size:64px;color:var(--brand);display:block;margin-bottom:1rem"></i>
+        <div style="font-size:16px;font-weight:600;margin-bottom:8px">${fileName}</div>
+        <div style="color:var(--muted);margin-bottom:1.5rem">Preview not available for this file type</div>
+        <a href="${fileUrl}" download="${fileName}" class="btn btn-primary"><i class="ti ti-download"></i> Download file</a>
+      </div>`;
+  }
+  
+  openModal('file-preview-modal');
+}
+</script>
+
+<!-- Inline Attendance Popover Menu -->
+<div id="attendance-popover" style="display:none;position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px;box-shadow:var(--shadow);z-index:9999;gap:6px;flex-direction:row">
+  <button class="btn btn-sm" style="background:#D1FAE5;color:#065F46;border:none;padding:6px 12px;font-weight:700" onclick="setPopoverAttendance('present')">Present</button>
+  <button class="btn btn-sm" style="background:#FEE2E2;color:#991B1B;border:none;padding:6px 12px;font-weight:700" onclick="setPopoverAttendance('absent')">Absent</button>
+</div>
+
+<!-- Chatbot floating panel -->
+<div class="chatbot-launcher" onclick="toggleChatbot()" id="chat-launcher">
+  <i class="ti ti-messages"></i>
+</div>
+
+<div class="chatbot-panel" id="chat-panel">
+  <div class="chatbot-header">
+    <span class="chatbot-title"><i class="ti ti-smart-home"></i> BuildTrack AI Advisor</span>
+    <button class="modal-close" style="color:#fff; font-size: 20px" onclick="toggleChatbot()">✕</button>
+  </div>
+  <div class="chatbot-messages" id="chat-messages">
+    <div class="chat-msg bot">
+      Hi! I'm your BuildTrack AI Advisor. Ask me anything about your construction sites, materials, expenses, or get estimates!
+    </div>
+  </div>
+  <div class="chatbot-suggestions">
+    <button class="chat-suggest-btn" onclick="sendSuggest('Predict monthly expenses')">📈 Predict Expenses</button>
+    <button class="chat-suggest-btn" onclick="sendSuggest('Estimate material cost for a 1500 sqft residential site')">🏗 Estimate Area Cost</button>
+    <button class="chat-suggest-btn" onclick="sendSuggest('Check low stock materials')">⚠️ Check stock</button>
+  </div>
+  <div class="chatbot-input-area">
+    <input type="text" class="chatbot-input" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChatMsg()"/>
+    <button class="chatbot-send" onclick="sendChatMsg()"><i class="ti ti-send"></i></button>
+  </div>
+</div>
 
 </body>
 </html>

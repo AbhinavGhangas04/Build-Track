@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import date
+import datetime
 from database import get_db
 from routers.auth import get_current_company
 
@@ -15,9 +15,12 @@ class WorkerIn(BaseModel):
 class AttendanceEntry(BaseModel):
     worker_id: int
     status: str
+    remarks: Optional[str] = None
+    in_time: Optional[str] = None
+    out_time: Optional[str] = None
 
 class AttendanceBulk(BaseModel):
-    date: Optional[date] = None
+    date: Optional[datetime.date] = None
     entries: List[AttendanceEntry]
 
 @router.get("/workers")
@@ -60,7 +63,7 @@ async def delete_worker(worker_id: int, company=Depends(get_current_company), db
 
 @router.get("/attendance")
 async def get_attendance(
-    att_date: Optional[date] = None,
+    att_date: Optional[datetime.date] = None,
     month: Optional[int] = None,
     year: Optional[int] = None,
     company=Depends(get_current_company),
@@ -95,16 +98,28 @@ async def get_attendance(
 @router.post("/attendance")
 async def mark_attendance(body: AttendanceBulk,
                           company=Depends(get_current_company), db=Depends(get_db)):
-    att_date = body.date or date.today()
+    att_date = body.date or datetime.date.today()
     results = []
     for entry in body.entries:
+        # asyncpg needs datetime.time objects, not plain strings
+        def parse_time(t):
+            if not t:
+                return None
+            try:
+                parts = t.strip().split(':')
+                return datetime.time(int(parts[0]), int(parts[1]))
+            except Exception:
+                return None
+
         row = await db.fetchrow(
-            """INSERT INTO attendance (worker_id, company_id, date, status)
-               VALUES ($1,$2,$3,$4)
+            """INSERT INTO attendance (worker_id, company_id, date, status, remarks, in_time, out_time)
+               VALUES ($1,$2,$3,$4,$5,$6,$7)
                ON CONFLICT (worker_id, date)
-               DO UPDATE SET status=EXCLUDED.status
+               DO UPDATE SET status=EXCLUDED.status, remarks=EXCLUDED.remarks,
+                             in_time=EXCLUDED.in_time, out_time=EXCLUDED.out_time
                RETURNING *""",
-            entry.worker_id, company["id"], att_date, entry.status
+            entry.worker_id, company["id"], att_date, entry.status, entry.remarks,
+            parse_time(entry.in_time), parse_time(entry.out_time)
         )
         results.append(dict(row))
     return results

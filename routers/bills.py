@@ -15,6 +15,7 @@ class BillIn(BaseModel):
     project_id: Optional[int] = None
     file_url: Optional[str] = None
     bill_date: Optional[date] = None
+    remarks: Optional[str] = None
 
 @router.get("/")
 async def list_bills(company=Depends(get_current_company), db=Depends(get_db)):
@@ -43,11 +44,11 @@ async def summary(company=Depends(get_current_company), db=Depends(get_db)):
 async def create_bill(body: BillIn, company=Depends(get_current_company), db=Depends(get_db)):
     row = await db.fetchrow(
         """INSERT INTO bills (company_id, project_id, description, amount, bill_type,
-           status, file_url, bill_date)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *""",
+           status, file_url, bill_date, remarks)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *""",
         company["id"], body.project_id, body.description, body.amount,
         body.bill_type, body.status, body.file_url,
-        body.bill_date or date.today()
+        body.bill_date or date.today(), body.remarks
     )
     return dict(row)
 
@@ -56,10 +57,10 @@ async def update_bill(bill_id: int, body: BillIn,
                       company=Depends(get_current_company), db=Depends(get_db)):
     row = await db.fetchrow(
         """UPDATE bills SET description=$1, amount=$2, bill_type=$3, status=$4,
-           project_id=$5, file_url=$6, bill_date=$7
-           WHERE id=$8 AND company_id=$9 RETURNING *""",
+           project_id=$5, file_url=$6, bill_date=$7, remarks=$8
+           WHERE id=$9 AND company_id=$10 RETURNING *""",
         body.description, body.amount, body.bill_type, body.status,
-        body.project_id, body.file_url, body.bill_date,
+        body.project_id, body.file_url, body.bill_date, body.remarks,
         bill_id, company["id"]
     )
     if not row:

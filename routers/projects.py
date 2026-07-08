@@ -13,6 +13,7 @@ class ProjectIn(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     contract_value: Optional[float] = 0
+    budget: Optional[float] = 0
     progress: Optional[int] = 0
     status: Optional[str] = "active"
 
@@ -28,10 +29,10 @@ async def list_projects(company=Depends(get_current_company), db=Depends(get_db)
 async def create_project(body: ProjectIn, company=Depends(get_current_company), db=Depends(get_db)):
     row = await db.fetchrow(
         """INSERT INTO projects (company_id, name, client, start_date, end_date,
-           contract_value, progress, status)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *""",
+           contract_value, budget, progress, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *""",
         company["id"], body.name, body.client, body.start_date,
-        body.end_date, body.contract_value, body.progress, body.status
+        body.end_date, body.contract_value, body.budget, body.progress, body.status
     )
     return dict(row)
 
@@ -40,10 +41,10 @@ async def update_project(project_id: int, body: ProjectIn,
                          company=Depends(get_current_company), db=Depends(get_db)):
     row = await db.fetchrow(
         """UPDATE projects SET name=$1, client=$2, start_date=$3, end_date=$4,
-           contract_value=$5, progress=$6, status=$7
-           WHERE id=$8 AND company_id=$9 RETURNING *""",
+           contract_value=$5, budget=$6, progress=$7, status=$8
+           WHERE id=$9 AND company_id=$10 RETURNING *""",
         body.name, body.client, body.start_date, body.end_date,
-        body.contract_value, body.progress, body.status,
+        body.contract_value, body.budget, body.progress, body.status,
         project_id, company["id"]
     )
     if not row:

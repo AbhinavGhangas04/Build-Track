@@ -90,6 +90,8 @@ async def create_tables():
                 date         DATE NOT NULL DEFAULT CURRENT_DATE,
                 status       TEXT NOT NULL CHECK (status IN ('present','absent','holiday')),
                 hours_worked NUMERIC(5,2) DEFAULT 8,
+                in_time      TIME,
+                out_time     TIME,
                 UNIQUE (worker_id, date)
             );
 
@@ -191,6 +193,7 @@ async def create_tables():
                 file_name    TEXT NOT NULL,
                 file_url     TEXT NOT NULL,
                 file_type    TEXT,
+                storage_key  TEXT,
                 category     TEXT,
                 uploaded_at  TIMESTAMPTZ DEFAULT NOW()
             );
@@ -203,3 +206,14 @@ async def create_tables():
             CREATE INDEX IF NOT EXISTS idx_payments_company ON client_payments(company_id);
             CREATE INDEX IF NOT EXISTS idx_notifications_company ON notifications(company_id);
         """)
+        await conn.execute("""
+            ALTER TABLE projects ADD COLUMN IF NOT EXISTS budget NUMERIC(14,2) DEFAULT 0;
+            ALTER TABLE bills ADD COLUMN IF NOT EXISTS remarks TEXT;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS remarks TEXT;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS arrival_date DATE DEFAULT CURRENT_DATE;
+            ALTER TABLE attendance ADD COLUMN IF NOT EXISTS remarks TEXT;
+            ALTER TABLE attendance ADD COLUMN IF NOT EXISTS in_time TIME;
+            ALTER TABLE attendance ADD COLUMN IF NOT EXISTS out_time TIME;
+            ALTER TABLE uploads ADD COLUMN IF NOT EXISTS storage_key TEXT;
+        """)
+
