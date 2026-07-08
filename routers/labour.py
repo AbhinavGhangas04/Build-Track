@@ -95,6 +95,24 @@ async def get_attendance(
         )
     return [dict(r) for r in rows]
 
+@router.get("/attendance/range")
+async def get_attendance_range(
+    start_date: datetime.date,
+    end_date: datetime.date,
+    company=Depends(get_current_company),
+    db=Depends(get_db)
+):
+    rows = await db.fetch(
+        """SELECT a.*, w.name as worker_name, w.role
+           FROM attendance a
+           JOIN workers w ON w.id = a.worker_id
+           WHERE a.company_id=$1
+             AND a.date BETWEEN $2 AND $3
+           ORDER BY a.date, w.name""",
+        company["id"], start_date, end_date
+    )
+    return [dict(r) for r in rows]
+
 @router.post("/attendance")
 async def mark_attendance(body: AttendanceBulk,
                           company=Depends(get_current_company), db=Depends(get_db)):
